@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # A tag push must carry plugin.json at the same version (ADR-0005 lockstep).
+  # The tag job below refuses the mismatch; promote.yml also checks before tagging.
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version and layout consistency
+        run: scripts/check-version.sh
+
+  tag-version:
+    # Runs only on tag pushes (release flow); skipped on PRs.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: plugin.json version equals the tag
+        env:
+          EXPECTED_VERSION: ${{ github.ref_name }}
+        run: |
+          EXPECTED_VERSION="${EXPECTED_VERSION#v}" scripts/check-version.sh

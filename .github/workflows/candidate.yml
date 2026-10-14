@@ -1,0 +1,59 @@
+name: candidate
+
+# TrueSeal Release candidate for trueseal-skills (e2e ADR-0002).
+#
+# This repo has no build artifacts — the skills tree IS the release — so the
+# candidate is: validate the version at a chosen main commit and stage a DRAFT
+# GitHub Release recording that commit. The Release Conductor (or promote.yml)
+# publishes the same commit later; the tag must equal plugin.json's version.
+#
+# Dispatch with the TrueSeal Release version, e.g. 0.6.0.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "TrueSeal Release version (X.Y.Z, no v prefix)"
+        required: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version matches the dispatch input
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: scripts/check-version.sh
+
+      - name: Refuse to stage over an existing release or tag
+        run: |
+          TAG="v${{ inputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1 || git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "Refusing to stage: $TAG already exists. A fix is a new patch version (sync ADR-0030)." >&2
+            exit 1
+          fi
+
+      - name: Stage the draft candidate release
+        run: |
+          TAG="v${{ inputs.version }}"
+          gh release create "$TAG" \
+            --draft \
+            --target "${{ github.sha }}" \
+            --title "TrueSeal ${{ inputs.version }} (candidate)" \
+            --notes "$(cat <<'EOF'
+          Candidate for the TrueSeal Release — trueseal-skills.
+
+          The skills tree at the target commit is the release content. The
+          Release Conductor publishes this draft as an immutable tag once the
+          gate is green (e2e ADR-0002). A red gate burns no version: fix
+          forward, then stage a fresh candidate.
+          EOF
+          )"
+          echo "Draft candidate $TAG staged at ${{ github.sha }}"

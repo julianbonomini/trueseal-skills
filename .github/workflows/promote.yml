@@ -1,0 +1,65 @@
+name: promote
+
+# Promote a staged candidate to the published, immutable tag (e2e ADR-0002).
+#
+# Verifies: the draft candidate exists, its target commit is an ancestor of
+# main, plugin.json at that commit carries the dispatch version, and the tag
+# does not exist. Then publishes the release — creating tag vX.Y.Z at the
+# candidate's commit. The tag-push check in ci.yml independently re-verifies
+# the version match.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "TrueSeal Release version to publish (X.Y.Z, no v prefix)"
+        required: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify the draft candidate and its commit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="v$VERSION"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "Refusing: $TAG already exists (published). Nothing to promote." >&2
+            exit 1
+          fi
+          CANDIDATE_SHA="$(gh release view "$TAG" --json targetCommitish,isDraft -q '.targetCommitish + " " + (.isDraft|tostring)')"
+          echo "candidate: $CANDIDATE_SHA"
+          SHA="${CANDIDATE_SHA% *}"
+          DRAFT="${CANDIDATE_SHA#* }"
+          if [ "$DRAFT" != "true" ]; then
+            echo "Refusing: $TAG is not a draft candidate." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "Refusing: candidate commit $SHA is not on main." >&2
+            exit 1
+          fi
+          git checkout -q "$SHA"
+          EXPECTED_VERSION="$VERSION" scripts/check-version.sh
+          echo "$SHA" > candidate-sha.txt
+
+      - name: Publish the immutable tag and release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="v$VERSION"
+          SHA="$(cat candidate-sha.txt)"
+          gh release edit "$TAG" --draft=false --title "TrueSeal $VERSION"
+          git ls-remote --tags origin "refs/tags/$TAG"
+          echo "Published $TAG at $SHA"
+          echo "trueseal-skills $VERSION published at $SHA" >> "$GITHUB_STEP_SUMMARY"
