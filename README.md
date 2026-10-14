@@ -80,13 +80,36 @@ skills/
   integrate/SKILL.md           # + references/{swift,kotlin,ts}.md
   pairing/SKILL.md             # + references/{swift,kotlin,ts}.md
   relay/SKILL.md               # + references/{swift,kotlin,ts}.md
+evals/                          # the nine G14 eval cases + runbook (see evals/README.md)
 ```
+
+## Evals and testing
+
+The skills are **tested on Claude Code only**. Other agents that read the
+standard Agent Skills layout get the same files, but their behaviour is
+untested, and public copy says so
+([docs ADR-0003](https://github.com/julianbonomini/trueseal-docs/blob/main/adr/0003-separate-agent-docs.md)).
+
+Two gates cover the skills:
+
+- **G11 — reference existence (CI, every PR).** The `reference-check` job in
+  `ci.yml` runs the trueseal-docs checker over `skills/`: every link and API
+  name must exist in the built Agent Docs, and the job fails on a dangling one.
+  Pre-release the nested docs checkout tracks `trueseal-docs@main`; the release
+  flow flips both checkouts to the release tag.
+- **G14 — behavioural evals (manual, pre-release).** Nine cases in `evals/` —
+  trigger, non-trigger and outcome per skill — run with `claude plugin eval`
+  on the release candidate, by the maintainer, never in CI (model-API spend).
+  The pass rule: each skill triggers in at least 2 of 3 runs and its outcome
+  case beats the no-plugin baseline. The full procedure and the evidence that
+  attaches to the release are in [evals/README.md](evals/README.md).
 
 ## Contributing
 
 Keep skill files free of numeric limits, error-case lists and version literals — the
 reference-existence check (trueseal-docs, gate G11) covers every link and API name in
-this repo and fails the release on a dangling one. Behavioural evals for the three
-skills land with SKILLS-3.
+this repo and fails CI on a dangling one (the `reference-check` job runs it on every
+PR). The behavioural evals for the three skills live in `evals/` and run manually
+before each release (gate G14 — see [evals/README.md](evals/README.md)).
 
 Security reports: see [SECURITY.md](SECURITY.md).
