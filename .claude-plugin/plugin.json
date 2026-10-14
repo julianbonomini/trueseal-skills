@@ -1,0 +1,5 @@
+{
+  "name": "trueseal",
+  "version": "0.6.0",
+  "description": "TrueSeal workflow skills: integrate the SDK into an app, build the pairing flow, and run a self-hosted relay. Workflow steps and pitfalls only — every API signature, limit, error case and version lives in the Agent Docs at https://trueseal.dev/agents/ and is linked, never copied."
+}
