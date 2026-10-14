@@ -46,4 +46,7 @@ jobs:
           ref: main
           path: trueseal-docs
       - run: cd trueseal-docs && bun install --frozen-lockfile && bun run build
-      - run: bun trueseal-docs/scripts/check-references.ts --ref main skills
+      # --ref must name the docs checkout's HEAD. Pass the resolved SHA rather
+      # than the branch name: it verifies identically whether checkout leaves a
+      # local `main` branch or a detached HEAD.
+      - run: bun trueseal-docs/scripts/check-references.ts --ref "$(git -C trueseal-docs rev-parse HEAD)" skills
