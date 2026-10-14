@@ -21,8 +21,40 @@ Any agent that supports the standard Agent Skills layout:
 npx skills add julianbonomini/trueseal-skills
 ```
 
-Claude Code marketplace support and the `/.well-known/agent-skills` index ship with
-SKILLS-2 (tracked in this repo's issues).
+(Verified against `skills` CLI 1.7.2: the tool finds all three skills from this repo's
+layout.)
+
+Claude Code, as a plugin marketplace:
+
+```
+/plugin marketplace add julianbonomini/trueseal-skills
+/plugin install trueseal@trueseal-skills
+```
+
+The marketplace manifest is [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)
+and the plugin it serves is this same repo.
+
+The docs site also publishes `/.well-known/agent-skills/index.json`, pinned to a release
+tag (built by the docs site — see trueseal-docs).
+
+## Versioning and releases
+
+This repo joins the **TrueSeal Release** lockstep
+([docs ADR-0005](https://github.com/julianbonomini/trueseal-docs/blob/main/adr/0005-trueseal-skills.md),
+[sync ADR-0030](https://github.com/julianbonomini/trueseal-sync/blob/main/docs/adr/0030-distribution-channels-and-lockstep-versions.md)):
+
+- Every TrueSeal Release tags this repo `vX.Y.Z` — **even when nothing changed** — so
+  "same version, same guidance" holds: an agent working with SDK `0.6.x` gets the
+  `0.6.x` skills, and plugin auto-update moves with SDK upgrades.
+- `.claude-plugin/plugin.json` (and the marketplace entry) carry exactly that version;
+  `scripts/check-version.sh` enforces the match in CI on every PR and on every tag push.
+- Release flow mirrors the other lockstep repos
+  ([e2e ADR-0002](https://github.com/julianbonomini/trueseal-e2e/blob/main/docs/adr/0002-release-conductor-orchestration.md)):
+  the `candidate` workflow validates a version at a main commit and stages a draft
+  release; the `promote` workflow (normally driven by the Release Conductor) verifies
+  the draft and publishes the immutable tag. A red gate burns no version; a fix is a
+  new patch version.
+- The tag is part of the Release Manifest the Conductor assembles at release time.
 
 ## Design rules
 
@@ -40,7 +72,10 @@ SKILLS-2 (tracked in this repo's issues).
 ## Layout
 
 ```
-.claude-plugin/plugin.json     # the trueseal plugin manifest
+.claude-plugin/plugin.json        # the trueseal plugin manifest
+.claude-plugin/marketplace.json   # the Claude Code marketplace manifest (serves the same repo)
+scripts/check-version.sh          # version/layout consistency gate (CI + release flows)
+.github/workflows/{ci,candidate,promote}.yml
 skills/
   integrate/SKILL.md           # + references/{swift,kotlin,ts}.md
   pairing/SKILL.md             # + references/{swift,kotlin,ts}.md

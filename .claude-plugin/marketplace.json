@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "trueseal-skills",
+  "owner": {
+    "name": "Julian Bonomini",
+    "url": "https://github.com/julianbonomini"
+  },
+  "plugins": [
+    {
+      "name": "trueseal",
+      "source": "./",
+      "description": "TrueSeal workflow skills: integrate the SDK into an app, build the pairing flow, and run a self-hosted relay. Workflow steps and pitfalls only — every API signature, limit, error case and version lives in the Agent Docs at https://trueseal.dev/agents/ and is linked, never copied.",
+      "version": "0.6.0"
+    }
+  ]
+}
