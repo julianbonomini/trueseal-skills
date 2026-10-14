@@ -27,3 +27,26 @@ jobs:
           EXPECTED_VERSION: ${{ github.ref_name }}
         run: |
           EXPECTED_VERSION="${EXPECTED_VERSION#v}" scripts/check-version.sh
+
+  reference-check:
+    # G11 (docs ADR-0003/0005): every link and API name in the skills must exist.
+    # The checker lives in trueseal-docs and resolves against that repo's built
+    # site; the documented snippet pins a release tag, but no release exists yet,
+    # so CI tracks trueseal-docs@main until 0.6.0 ships — the release flow then
+    # flips both checkouts to the tag (documented in README.md).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/checkout@v4
+        with:
+          repository: julianbonomini/trueseal-docs
+          ref: main
+          path: trueseal-docs
+      - run: cd trueseal-docs && bun install --frozen-lockfile && bun run build
+      # --ref must name the docs checkout's HEAD. Pass the resolved SHA rather
+      # than the branch name: it verifies identically whether checkout leaves a
+      # local `main` branch or a detached HEAD.
+      - run: bun trueseal-docs/scripts/check-references.ts --ref "$(git -C trueseal-docs rev-parse HEAD)" skills
